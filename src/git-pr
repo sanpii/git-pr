@@ -27,6 +27,9 @@ function merge_from_url()
         https://github.com/*)
             merge_from_github "$url"
         ;;
+        https://gitlab.com/*)
+            merge_from_gitlab "$url"
+        ;;
         *)
             error "Unsuported site '$url'"
             exit 1
@@ -52,6 +55,11 @@ function merge_from_github()
     local target=$(echo "$json" | shyaml get-value base.ref)
 
     merge "$remote" "${remote_name,,}" "$branch" "$target"
+}
+
+function merge_from_gitlab()
+{
+    local url=$1
 }
 
 function merge()
