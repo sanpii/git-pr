@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+function main()
+{
+    local remote=$1
+    local remote_name=$2
+    local branch=$3
+    local target=${4-master}
+
+    remote_exists "$remote" "$remote_name" || git remote add "$remote_name" "$remote"
+
+    git fetch "$remote_name"
+    git checkout -b "$remote_name-$branch" $remote_name/$branch
+
+    if is_branch_uptodate "$remote_name-$branch" "$target"
+    then
+        git rebase "$target"
+    fi
+
+    git checkout "$target"
+    git merge --no-edit "$remote_name-$branch"
+    git branch --delete --force "$remote_name-$branch"
+}
+
+function remote_exists()
+{
+    local url=$1
+    local name=$2
+
+    test $(git remote --verbose | grep -qE "^$name\s$url")
+}
+
+function is_branch_uptodate()
+{
+    local branch=$1
+    local target=${2-master}
+
+    test $(git log $branch..$target | wc -l) -ne 0
+}
+
+main $@
