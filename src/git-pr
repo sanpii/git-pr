@@ -4,6 +4,58 @@ set -e
 
 function main()
 {
+    if [[ $# -eq 1 ]]
+    then
+        merge_from_url $@
+    else
+        merge $@
+    fi
+}
+
+function merge_from_url()
+{
+    local url=$1
+
+    type shyaml 2> /dev/null
+    if [[ ! $? ]]
+    then
+        error "Merge from an url require shyaml command"
+        exit 1
+    fi
+
+    case "$url" in
+        https://github.com/*)
+            merge_from_github "$url"
+        ;;
+        *)
+            error "Unsuported site '$url'"
+            exit 1
+        ;;
+    esac
+}
+
+function merge_from_github()
+{
+    local url=$1
+    local api_url=$(echo "$url" | sed 's#github.com/#api.github.com/repos/#' | sed 's#/pull/#/pulls/#')
+    local json=$(wget --quiet "$api_url" -O -)
+
+    if [[ -z "$json" ]]
+    then
+        error "Invalid github url '$url'"
+        exit 1
+    fi
+
+    local remote=$(echo "$json" | shyaml get-value head.repo.clone_url)
+    local remote_name=$(echo "$json" | shyaml get-value head.repo.owner.login)
+    local branch=$(echo "$json" | shyaml get-value head.ref)
+    local target=$(echo "$json" | shyaml get-value base.ref)
+
+    merge "$remote" "${remote_name,,}" "$branch" "$target"
+}
+
+function merge()
+{
     local remote=$1
     local remote_name=$2
     local branch=$3
@@ -38,6 +90,60 @@ function is_branch_uptodate()
     local target=${2-master}
 
     test $(git log $branch..$target | wc -l) -ne 0
+}
+
+function info()
+{
+    println BLUE "$1"
+}
+
+function success()
+{
+    println GREEN "$1"
+}
+
+function warning()
+{
+    println ORANGE "$1"
+}
+
+function error()
+{
+    println RED "$1"
+}
+
+function println()
+{
+    print "$1" "$2"
+    echo
+}
+
+function print()
+{
+    local NONE=$(tput -Txterm sgr0)
+
+    local color=$1
+    local message=$2
+
+    case "$color" in
+        RED)
+            color=$(tput -Txterm setaf 1)
+        ;;
+        GREEN)
+            color=$(tput -Txterm setaf 2)
+        ;;
+        ORANGE)
+            color=$(tput -Txterm setaf 3)
+        ;;
+        BLUE)
+            color=$(tput -Txterm setaf 4)
+        ;;
+        *)
+            color=$NONE
+        ;;
+    esac
+
+    echo -n "${color}$message${NONE}"
 }
 
 main $@
