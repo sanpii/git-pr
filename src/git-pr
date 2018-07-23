@@ -81,7 +81,7 @@ function remote_exists()
     local url=$1
     local name=$2
 
-    test $(git remote --verbose | grep -qE "^$name\s$url")
+    git remote --verbose | grep -qE "^$name\s$url"
 }
 
 function is_branch_uptodate()
