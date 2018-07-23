@@ -16,7 +16,7 @@ function merge_from_url()
 {
     local url=$1
 
-    type shyaml 2> /dev/null
+    type shyaml 2>&1 > /dev/null
     if [[ ! $? ]]
     then
         error "Merge from an url require shyaml command"
