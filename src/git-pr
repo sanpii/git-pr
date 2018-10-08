@@ -28,8 +28,7 @@ function merge_from_url()
             merge_from_github "$url"
         ;;
         *)
-            error "Unsuported site '$url'"
-            exit 1
+            merge_from_gitlab "$url"
         ;;
     esac
 }
@@ -52,6 +51,49 @@ function merge_from_github()
     local target=$(echo "$json" | shyaml get-value base.ref)
 
     merge "$remote" "${remote_name,,}" "$branch" "$target"
+}
+
+function merge_from_gitlab()
+{
+    local url=$1
+    local api_url=$(echo "$url" | sed 's#\(https://[^/]\+\)/\([^/]\+\)/\([^/]\+\)#\1/api/v4/projects/\2%2F\3#')
+    local json=$(wget --quiet "$api_url" -O -)
+
+    if [[ -z "$json" ]]
+    then
+        error "Invalid gitlab url '$url'"
+        exit 1
+    fi
+
+    local remote=$(gitlab_get_remote "$url" "$(echo "$json" | shyaml get-value source_project_id)")
+    local remote_name=$(echo "$json" | shyaml get-value author.username)
+    local branch=$(echo "$json" | shyaml get-value source_branch)
+    local target=$(echo "$json" | shyaml get-value target_branch)
+    local merge_status=$(echo "$json" | shyaml get-value merge_status)
+
+    if [[ "$merge_status" = 'can_be_merged' ]]
+    then
+        merge "$remote" "$remote_name" "$branch" "$target"
+    else
+        error "This MR couldn’t be merged!"
+        exit 1
+    fi
+}
+
+function gitlab_get_remote()
+{
+    local url=$(echo "$1" | sed 's#\(https://[^/]\+\)/.*#\1#')
+    local id=$2
+    local api_url=$(echo "$url/api/v4/projects/$id")
+    local json=$(wget --quiet "$api_url" -O -)
+
+    if [[ -z "$json" ]]
+    then
+        error "Invalid gitlab url '$url'"
+        exit 1
+    fi
+
+    echo "$json" | shyaml get-value ssh_url_to_repo
 }
 
 function merge()
