@@ -8,7 +8,8 @@ function main()
     then
         merge_from_url $@
     else
-        merge $@
+        warning "Missing url argument"
+        echo "$0 <url>"
     fi
 }
 
