@@ -1,0 +1,17 @@
+[package]
+name = "git-pr"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+regex-lite = "0.1"
+ureq = "3.0.0-rc2"
+
+[dependencies.clap]
+version = "4.5"
+features = ["derive"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
